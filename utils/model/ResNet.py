@@ -35,7 +35,7 @@ class ResidualBlock(nn.Module):
         out = self.conv2(out)
         out = self.bn2(out)
 
-        if self.downsample is not None:
+        if self.down_sample is not None:
             shortcut = self.down_sample(x)
 
         out += shortcut     # residual connection

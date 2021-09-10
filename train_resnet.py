@@ -79,10 +79,10 @@ def train(epoch, global_steps):
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
-        acc = 100 * correct / total
-        print(f'train epoch : {epoch} [{batch_idx} / {len(train_loader)}] | loss: {train_loss/ (batch_idx + 1):.3f} | acc: {acc}')
+    acc = 100 * correct / total
+    print(f'train epoch : {epoch} [{batch_idx} / {len(train_loader)}] | loss: {train_loss/ (batch_idx + 1):.3f} | acc: {acc}')
 
-        writer.add_scalar('log/train error', 100 - acc, global_steps)
+    writer.add_scalar('log/train error', 100 - acc, global_steps)
     return global_steps
 
 def test(epoch, best_acc, global_steps):
@@ -104,11 +104,11 @@ def test(epoch, best_acc, global_steps):
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
-            acc = 100 * correct / total
-            print(
+        acc = 100 * correct / total
+        print(
             f'test epoch : {epoch} [{batch_idx} / {len(test_loader)}] | loss: {test_loss / (batch_idx + 1):.3f} | acc: {acc}')
 
-            writer.add_scalar('log/test error', 100 - acc, global_steps)
+        writer.add_scalar('log/test error', 100 - acc, global_steps)
 
     if acc > best_acc:
         print('==> Saving model')
