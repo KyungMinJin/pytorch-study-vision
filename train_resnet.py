@@ -15,7 +15,7 @@ import  argparse
 from tensorboardX import SummaryWriter
 
 parser = argparse.ArgumentParser(description='cifar10 cls model')
-parser.add_argument('--lr', default=0.1)
+parser.add_argument('--lr', default=0.0001)
 parser.add_argument('--resume', default=None)
 parser.add_argument('--batch_size', default=128)
 parser.add_argument('--batch_size_test', default=100)
@@ -64,7 +64,6 @@ def train(epoch, global_steps):
 
     for batch_idx, (inputs, targets) in enumerate(train_loader):
         global_steps += 1
-        step_lr_scheduler.step()
         inputs = inputs.to('cuda')
         targets = targets.to('cuda')
         outputs = model(inputs)
@@ -73,14 +72,15 @@ def train(epoch, global_steps):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        step_lr_scheduler.step()
 
-        train_loss += loss.item()
+        train_loss += loss.sum().item()
         _, predicted = outputs.max(1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
     acc = 100 * correct / total
-    print(f'train epoch : {epoch} [{batch_idx} / {len(train_loader)}] | loss: {train_loss/ (batch_idx + 1):.3f} | acc: {acc}')
+    print(f'train epoch : {epoch} [{batch_idx} / {len(train_loader)}] | loss: {train_loss/ (batch_idx + 1):.3f} | acc: {acc:.3f}')
 
     writer.add_scalar('log/train error', 100 - acc, global_steps)
     return global_steps
@@ -99,14 +99,14 @@ def test(epoch, best_acc, global_steps):
             outputs = model(inputs)
             loss = criterion(outputs, targets)
 
-            test_loss += loss.item()
+            test_loss += loss.sum().item()
             _, predicted = outputs.max(1)
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
         acc = 100 * correct / total
         print(
-            f'test epoch : {epoch} [{batch_idx} / {len(test_loader)}] | loss: {test_loss / (batch_idx + 1):.3f} | acc: {acc}')
+            f'test epoch : {epoch} [{batch_idx} / {len(test_loader)}] | loss: {test_loss / (batch_idx + 1):.3f} | acc: {acc:.3f}')
 
         writer.add_scalar('log/test error', 100 - acc, global_steps)
 
