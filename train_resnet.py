@@ -8,20 +8,22 @@ import torch.backends.cudnn as cudnn
 import torchvision
 import torchvision.transforms as transforms
 from torchvision.datasets import CIFAR10
-from torch.utils.data import  DataLoader
+from torch.utils.data import DataLoader
 
-from utils.model.ResNet import resnet
-import  argparse
+from utils.model.ResNet import ResNet18
+import argparse
 from tensorboardX import SummaryWriter
 
 parser = argparse.ArgumentParser(description='cifar10 cls model')
-parser.add_argument('--lr', default=0.0001)
+parser.add_argument('--lr', default=0.1)
 parser.add_argument('--resume', default=None)
 parser.add_argument('--batch_size', default=128)
 parser.add_argument('--batch_size_test', default=100)
 parser.add_argument('--num_worker', default=4)
 parser.add_argument('--logdir', default='logs')
 args = parser.parse_args()
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 transforms_train = transforms.Compose([
     transforms.RandomCrop(32, padding=4),
@@ -39,10 +41,15 @@ dataset_train = CIFAR10(root='./data', train=True, download=False, transform=tra
 dataset_test = CIFAR10(root='./data', train=False, download=False, transform=transforms_test)
 
 train_loader = DataLoader(dataset_train, batch_size=args.batch_size, shuffle=True, num_workers=args.num_worker)
-test_loader = DataLoader(dataset_test, batch_size=args.batch_size, shuffle=False, num_workers=args.num_worker)
+test_loader = DataLoader(dataset_test, batch_size=args.batch_size_test, shuffle=False, num_workers=args.num_worker)
 
-model = resnet().to('cuda')
+classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+
+print('==> Making model..')
+
+model = ResNet18().to(device)
 num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print('The number of parameters of model is', num_params)
 
 if args.resume is not None:
     checkpoints = torch.load('./checkpoints/' + args.resume)
@@ -64,8 +71,8 @@ def train(epoch, global_steps):
 
     for batch_idx, (inputs, targets) in enumerate(train_loader):
         global_steps += 1
-        inputs = inputs.to('cuda')
-        targets = targets.to('cuda')
+        inputs = inputs.to(device)
+        targets = targets.to(device)
         outputs = model(inputs)
         loss = criterion(outputs, targets)
 
@@ -74,13 +81,13 @@ def train(epoch, global_steps):
         optimizer.step()
         step_lr_scheduler.step()
 
-        train_loss += loss.sum().item()
+        train_loss += loss.item()
         _, predicted = outputs.max(1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
     acc = 100 * correct / total
-    print(f'train epoch : {epoch} [{batch_idx} / {len(train_loader)}] | loss: {train_loss/ (batch_idx + 1):.3f} | acc: {acc:.3f}')
+    print(f'train epoch : {epoch} [{batch_idx+1} / {len(train_loader)}] | loss: {train_loss/ (batch_idx + 1):.3f} | acc: {acc:.3f}')
 
     writer.add_scalar('log/train error', 100 - acc, global_steps)
     return global_steps
@@ -94,19 +101,19 @@ def test(epoch, best_acc, global_steps):
 
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
-            inputs = inputs.to('cuda')
-            targets = targets.to('cuda')
+            inputs = inputs.to(device)
+            targets = targets.to(device)
             outputs = model(inputs)
             loss = criterion(outputs, targets)
 
-            test_loss += loss.sum().item()
+            test_loss += loss.item()
             _, predicted = outputs.max(1)
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
         acc = 100 * correct / total
         print(
-            f'test epoch : {epoch} [{batch_idx} / {len(test_loader)}] | loss: {test_loss / (batch_idx + 1):.3f} | acc: {acc:.3f}')
+            f'test epoch : {epoch} [{batch_idx+1} / {len(test_loader)}] | loss: {test_loss / (batch_idx + 1):.3f} | acc: {acc:.3f}')
 
         writer.add_scalar('log/test error', 100 - acc, global_steps)
 
